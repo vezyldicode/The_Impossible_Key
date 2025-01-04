@@ -1,0 +1,33 @@
+from captcha.image import ImageCaptcha
+import tkinter as tk
+from PIL import Image, ImageTk
+from io import BytesIO
+
+def Rule5(action, parent, font, password):
+    # Tạo chữ CAPTCHA
+    captcha_text = 'abc123'
+
+    # Tạo ảnh CAPTCHA và lấy dữ liệu nhị phân
+    image = ImageCaptcha()
+    image_data = BytesIO()
+    image.write(captcha_text, image_data)  # Ghi dữ liệu ảnh vào luồng nhị phân
+
+    # Đặt lại con trỏ của luồng và mở ảnh bằng Pillow
+    image_data.seek(0)
+    captcha_image = Image.open(image_data)
+
+    # Chuyển đổi ảnh thành PhotoImage
+    captcha_photo = ImageTk.PhotoImage(captcha_image)
+
+    # Tạo label và hiển thị CAPTCHA
+    label = tk.Label(parent, text="Mật khẩu phải chứa mã captcha sau", 
+                     image=captcha_photo, font=font, anchor="center", compound="top", fg='red')
+    label.image = captcha_photo  # Giữ tham chiếu để tránh bị Garbage Collector xóa
+    label.pack()
+
+# Chạy ứng dụng để kiểm tra
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.geometry("400x300")  # Đặt kích thước cửa sổ
+    Rule5(None, root, ("Arial", 12), "password123")
+    root.mainloop()
