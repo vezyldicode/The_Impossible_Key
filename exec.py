@@ -1,4 +1,4 @@
-from lib import file_handler as file
+
 from lib.Rules import *
 import tkinter as tk
 from tkinter import *
