@@ -7,8 +7,8 @@ import os
 class MazeGame:
     def __init__(self, root):
         self.root = root
-        self.root.title("Maze Game")
-        self.root.geometry("600x600")
+        self.root.title("Mind Maze")
+        self.root.geometry("1000x600")
 
         # Configure grid dimensions
         self.grid_size = 10
@@ -23,10 +23,8 @@ class MazeGame:
         # Exit position
         self.exit_pos = [self.grid_size - 1, self.grid_size - 1]
 
-        # Create canvas for the game
-        self.canvas = ctk.CTkCanvas(self.root, width=self.grid_size * self.cell_size,
-                                    height=self.grid_size * self.cell_size, bg="white")
-        self.canvas.pack()
+
+        self.UI_setup()
 
         # Draw maze
         self.images = {}  # Store images for reuse
@@ -52,9 +50,15 @@ class MazeGame:
         self.root.bind("<Left>", lambda event: self.move_player("left"))
         self.root.bind("<Right>", lambda event: self.move_player("right"))
 
-        # Create fog overlay
         self.fog_overlay = None
-        self.update_fog()
+        # self.update_fog()
+
+    def UI_setup(self):
+        # Create canvas for the game
+        self.canvas = ctk.CTkCanvas(self.root, width=self.grid_size * self.cell_size,
+                                    height=self.grid_size * self.cell_size, bg="white")
+        self.canvas.pack()
+
 
     def generate_maze(self):
         maze = [[1 for _ in range(self.grid_size)] for _ in range(self.grid_size)]
@@ -123,7 +127,12 @@ class MazeGame:
                     self.canvas.create_image(x_center, y_center, image=self.images["wall"])
                 else:
                     self.canvas.create_image(x_center, y_center, image=self.images["path"])
-
+        # Draw exit
+        self.canvas.create_image(
+            self.exit_pos[1] * self.cell_size + self.cell_size // 2,
+            self.exit_pos[0] * self.cell_size + self.cell_size // 2,
+            image=self.images["exit"]
+        )
         # Draw player
         self.player = self.canvas.create_image(
             self.player_pos[1] * self.cell_size + self.cell_size // 2,
@@ -131,13 +140,7 @@ class MazeGame:
             image=self.images["player"]
         )
 
-        # Draw exit
-        self.canvas.create_image(
-            self.exit_pos[1] * self.cell_size + self.cell_size // 2,
-            self.exit_pos[0] * self.cell_size + self.cell_size // 2,
-            image=self.images["exit"]
-        )
-
+        
     def update_fog(self):
         """Update the fog overlay to highlight only cells around the player."""
         if self.fog_overlay:
@@ -173,26 +176,25 @@ class MazeGame:
         dx = (end_x - start_x) / steps
         dy = (end_y - start_y) / steps
 
-        def animate_step(step):
-            if step < steps:
-                self.canvas.itemconfig(self.player, image=frames[step])
-                self.canvas.coords(
-                    self.player,
-                    start_x + dx * (step + 1),
-                    start_y + dy * (step + 1)
-                )
-                self.root.after(50, animate_step, step + 1)
-            else:
-                self.is_moving = False  # Re-enable input after animation
-                self.update_fog()
+        for i, frame in enumerate(frames):
+            self.canvas.itemconfig(self.player, image=frame)
+            self.canvas.coords(
+                self.player,
+                start_x + dx * (i + 1),
+                start_y + dy * (i + 1)
+            )
+            self.root.update()
+            
+            self.root.after(20)  # Delay between frames
+            
 
-        animate_step(0)
 
     def move_player(self, direction):
         if self.is_moving:
-            return  # Ignore input if already moving
-
+            return
+        
         row, col = self.player_pos
+
         if direction == "up" and row > 0 and self.maze[row - 1][col] == 0:
             target_pos = [row - 1, col]
         elif direction == "down" and row < self.grid_size - 1 and self.maze[row + 1][col] == 0:
@@ -203,12 +205,13 @@ class MazeGame:
             target_pos = [row, col + 1]
         else:
             return
-
-        # Disable input and animate
         self.is_moving = True
+        # Animate the movement
         self.animate_player(direction, target_pos)
-        self.player_pos = target_pos  # Update player position after animation
 
+        # Update player position
+        self.player_pos = target_pos
+        self.update_fog()
         # Call on_enter_new_cell if the cell is new
         current_cell = tuple(self.player_pos)
         if current_cell not in self.visited_cells:
@@ -218,24 +221,67 @@ class MazeGame:
         # Check for win
         if self.player_pos == self.exit_pos:
             self.win_game()
+        else:
+            self.is_moving = False
 
     def on_enter_new_cell(self, cell):
         """Handle logic for entering a new cell."""
         print(f"Entered new cell: {cell}")
 
     def win_game(self):
-        self.canvas.create_text(
-            self.grid_size * self.cell_size // 2,
-            self.grid_size * self.cell_size // 2,
-            text="You Win!",
-            font=("Arial", 24),
-            fill="red"
-        )
+        def replay_prompt():
+            popup = tk.Toplevel(self.root)
+            popup.title("Game Over")
+            popup.geometry("300x150")
+            popup_label = tk.Label(popup, text="You Win! Play Again?", font=("Arial", 14))
+            popup_label.pack(pady=20)
+
+            def replay():
+                popup.destroy()
+                self.reset_game()
+
+            def quit_game():
+                popup.destroy()
+                self.root.destroy()
+
+            replay_button = tk.Button(popup, text="Replay", command=replay)
+            quit_button = tk.Button(popup, text="Quit", command=quit_game)
+            replay_button.pack(side=tk.LEFT, padx=20, pady=10)
+            quit_button.pack(side=tk.RIGHT, padx=20, pady=10)
+
+        def animate_victory():
+            victory_frames = self.load_animation_frames("Image\Maze\hero\winA")
+            for frame in victory_frames:
+                self.canvas.itemconfig(self.player, image=frame)
+                self.root.update()
+                self.root.after(100)
+
+        # Stop player movement
         self.root.unbind("<Up>")
         self.root.unbind("<Down>")
         self.root.unbind("<Left>")
         self.root.unbind("<Right>")
 
+        # Show victory animation
+        animate_victory()
+
+        # Display replay prompt
+        replay_prompt()
+
+    def reset_game(self):
+        """Reset the game to start again."""
+        self.player_pos = [0, 0]
+        self.visited_cells = set()
+        self.visited_cells.add(tuple(self.player_pos))
+        self.maze = self.generate_maze()
+        self.canvas.delete("all")
+        self.draw_maze()
+        self.is_moving = False
+        self.update_fog()
+        self.root.bind("<Up>", lambda event: self.move_player("up"))
+        self.root.bind("<Down>", lambda event: self.move_player("down"))
+        self.root.bind("<Left>", lambda event: self.move_player("left"))
+        self.root.bind("<Right>", lambda event: self.move_player("right"))
 
 if __name__ == "__main__":
     root = ctk.CTk()
