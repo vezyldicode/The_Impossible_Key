@@ -5,19 +5,22 @@ from PIL import Image, ImageTk
 import os
 import random
 from random import choice, shuffle, seed
+from assets.quizzes.Rules_Dictionary import *
 
 class MazeGame:
     def __init__(self, root):
         self.root = root
         self.root.title("Mind Maze")
         self.root.geometry("1000x800")
+        self.configfile_path = "config\world_config.ini"
+        self.anticheat = True
 
         # Configure grid dimensions
-        self.grid_size = 10
-        self.cell_size = 40
+        self.grid_size = int(self.fsreach(self.configfile_path, "grid_size")) 
+        self.cell_size = int(self.fsreach(self.configfile_path, "cell_size")) 
 
         # Seed for maze generation
-        self.seed_input = ""
+        self.seed_input = 550871
 
         # Generate or set seed
         self.initialize_seed()
@@ -33,8 +36,27 @@ class MazeGame:
         self.exit_pos = [self.grid_size - 1, self.grid_size - 1]
 
         # Create main frame
-        self.main_frame = ctk.CTkFrame(self.root)
+        self.bg = self.fsreach(self.configfile_path, "background_color")
+        self.textcolor = self.fsreach(self.configfile_path, "text_color")
+        self.wrongcolor = self.fsreach(self.configfile_path, "wrong_color")
+        self.textfont_family = self.fsreach(self.configfile_path, "text_font")
+        self.textsize = int(self.fsreach(self.configfile_path, "text_size"))
+        self.textfont = (self.textfont_family, self.textsize)
+
+
+        self.main_frame = ctk.CTkFrame(self.root, fg_color=self.bg)
         self.main_frame.pack(fill="both", expand=True)
+
+        self.nav_bar = ctk.CTkFrame(self.main_frame,
+                                    height=35)
+        self.nav_bar.pack(padx =5, pady =5, fill='x')
+
+        self.maze_frame = ctk.CTkFrame(self.main_frame,)
+        self.maze_frame.pack(padx = 20, pady = 20,  side = "left", fill = "both")
+
+        self.quizzes_frame = ctk.CTkFrame(self.main_frame)
+        self.quizzes_frame.pack(padx = 20, pady = 20, side = "right", fill = "both", expand = "true")
+
 
         # Generate rules
         self.initialize_rules()
@@ -49,10 +71,10 @@ class MazeGame:
         # Load animation frames
 
         self.animation_frames = {
-            "up": self.load_animation_frames("Image\Maze\hero\walkup"),
-            "down": self.load_animation_frames("Image\Maze\hero\walkdown"),
-            "left": self.load_animation_frames("Image\Maze\hero\walkleft"),
-            "right": self.load_animation_frames("Image\Maze\hero\walkright"),
+            "up": self.load_animation_frames("assets\hero\walkup"),
+            "down": self.load_animation_frames("assets\hero\walkdown"),
+            "left": self.load_animation_frames("assets\hero\walkleft"),
+            "right": self.load_animation_frames("assets\hero\walkright"),
         }
 
         # Keep track of visited cells
@@ -67,37 +89,52 @@ class MazeGame:
         self.update_fog()
 
         self.setting_tab()
-
+        self.create_rule_label(1)
     def UI_setup(self):
-        def nav_bar_setup():
-            self.setting_button = ctk.CTkButton(self.nav_bar,
-                                    text = "",
-                                    font=('Comic Sans MS', 15),
-                                    corner_radius=32,
-                                    command=self.open_settings,
-                                    width = 30)
-            self.setting_button.pack(side="right", padx=10, pady=10)
+        self.setting_button = ctk.CTkButton(self.nav_bar,
+                                text = "",
+                                font=('Comic Sans MS', 15),
+                                corner_radius=32,
+                                command=self.open_settings,
+                                width = 30)
+        self.setting_button.pack(side="right", padx=10, pady=10)
 
-        self.bg = '#2A3335'
-        self.textcolor = '#FFF0DC'
-        self.wrongcolor = '#D91656'
-
-        self.nav_bar = ctk.CTkFrame(self.main_frame,
-                                    height=35)
-        self.nav_bar.pack(padx =5, pady =5, fill='x')
-        nav_bar_setup()
         # Tạo canvas cho maze
-        self.maze_canvas = ctk.CTkCanvas(self.main_frame,
+        self.maze_canvas = ctk.CTkCanvas(self.maze_frame,
                                     width=self.grid_size * self.cell_size,
                                     height=self.grid_size * self.cell_size,
                                     bg=self.bg)
-        self.maze_canvas.pack()
+        self.maze_canvas.pack(anchor = "center")
         self.maze_canvas.bind("<Button-1>", self.allows_move_player)
+
+        self.label_title = ctk.CTkLabel(
+            self.quizzes_frame,
+            text="Write down your password",
+            font=self.textfont,
+            justify="center",
+            text_color=self.textcolor,)
+        self.label_title.pack(padx=20, pady=20, anchor="center")
+
+        self.userinput = ctk.CTkEntry(
+            self.quizzes_frame,
+            placeholder_text="Write Here",
+            font=('Cascadia Mono', 18),
+            fg_color='#F4F4F4',
+            text_color='black',
+            height=40,
+            corner_radius=10
+        )
+        self.userinput.pack(padx=20, pady=12, anchor="center", fill="x")
+        self.userinput.bind("<KeyRelease>", self.check_password)
+
+        self.rules_frame = ctk.CTkScrollableFrame(self.quizzes_frame)
+        self.rules_frame.pack(padx=20, pady=12, fill="both", expand=True)
+        # self.userinput.bind("<KeyRelease>", self.password_change)
 
     def setting_tab(self):
         
         # Create settings frame
-        self.settings_frame = ctk.CTkFrame(self.root)
+        self.settings_frame = ctk.CTkFrame(self.root, fg_color=self.bg)
         self.setting_nav_bar = ctk.CTkFrame(self.settings_frame,
                                         height=35)
         self.setting_nav_bar.pack(padx =5, pady =5, fill='x')
@@ -110,19 +147,19 @@ class MazeGame:
 
         self.seed_label = ctk.CTkLabel(self.settings_frame,
                                         text=("Seed:"),
-                                        font=('Cascadia Code SemiBold', 25), 
+                                        font=self.textfont, 
                                         text_color=self.textcolor)
         self.seed_label.pack(side="left", padx=(20, 10), anchor = "n")
-        self.seed_label.bind("<Button-1>", lambda event: root.clipboard_append(str(getattr(self, 'maze_seed'))))
+        self.seed_label.bind("<Button-1>", lambda event: (root.clipboard_clear(), root.clipboard_append(str(getattr(self, 'maze_seed')))))
         self.seed_entry = ctk.CTkEntry(self.settings_frame,
                                        width=200,
                                        border_width=0,
-                                       font=('Cascadia Code SemiBold', 25),
+                                       font=self.textfont,
                                        text_color=self.textcolor,
                                        fg_color="transparent")
         self.seed_entry.pack(side="left", anchor = "n")
 
-        self.checkbox = ctk.CTkCheckBox(self.settings_frame, text = "Option", font=('Cascadia Code SemiBold', 25), 
+        self.checkbox = ctk.CTkCheckBox(self.settings_frame, text = "Option", font=self.textfont, 
                                         text_color=self.textcolor)
         self.checkbox.pack(side ="top", padx = 20, anchor = "w")
 
@@ -138,7 +175,6 @@ class MazeGame:
         self.update_setting()
         self.settings_frame.pack(fill="both", expand=True)
         self.disable_move_player()
-
 
     def close_settings(self):
         self.settings_frame.pack_forget()
@@ -160,26 +196,26 @@ class MazeGame:
     def initialize_rules(self):
         """Generate rules based on the current seed."""
         self.current_level = 1
-        self.max_level = 5  # Example: Total number of levels
-        self.ALL_RULES = {
-            1: "Rule 1",
-            2: "Rule 2",
-            3: "Rule 3",
-            4: "Rule 4",
-            5: "Rule 5"
-        }  # Define more rules as needed
+        self.max_level = int(self.fsreach(self.configfile_path, "max_rules_count"))
         seed(self.maze_seed)  # Use the same seed as the maze
 
-        rule_indices = list(self.ALL_RULES.keys())
+        rule_indices = list(ALL_RULES.keys())
         shuffle(rule_indices)  # Shuffle the rules based on the seed
-        self.rules = {i + 1: self.ALL_RULES[rule_idx] for i, rule_idx in enumerate(rule_indices[:self.max_level])}
-        print("Generated rules:", self.rules)
+        self.rules = {i + 1: ALL_RULES[rule_idx] for i, rule_idx in enumerate(rule_indices[:self.max_level])}
+        self.rule_status = {i: False for i in range(1, self.max_level + 1)}
+        self.rule_labels = {}
 
-        # rule_indices = random.sample(list(self.ALL_RULES.keys()), self.max_level)
-        # self.rules = {i + 1: self.ALL_RULES[rule_idx] for i, rule_idx in enumerate(rule_indices)}
-        # self.rule_status = {i: False for i in range(1, self.max_level + 1)}
-        # self.rule_labels = {}
-        
+    def create_rule_label(self, level):
+        """Tạo label mới cho rule"""
+        rule_text = self.rules[level][0]
+        label = ctk.CTkLabel(
+            self.rules_frame,
+            text=f"{level}. {rule_text}",
+            font=("Comic Sans MS", 16, "bold"),
+            text_color="red"
+        )
+        label.pack(pady=5, padx=10, anchor="w")
+        self.rule_labels[level] = label
 
     def generate_maze(self):
         if self.maze_seed is not None:
@@ -224,20 +260,23 @@ class MazeGame:
             resized_image = image.resize((self.cell_size, self.cell_size), Image.Resampling.LANCZOS)
             return ImageTk.PhotoImage(resized_image)
 
-        self.images["wall"] = load_image("Image\Maze\level\wallStone.png")
-        self.images["player"] = load_image("Image\Maze\hero\hitA\hero_hitA_0000.png")
-        self.images["exit"] = load_image("Image\Maze\level\groundExit.png")
-        self.images["path"] = load_image("Image\Maze\level\groundEarth_checkered.png")
+        self.images["wall"] = load_image("assets\level\wallStone_small.png")
+        self.images["player"] = load_image("assets\hero\idleright\hero_idleB_0000.png")
+        self.images["exit"] = load_image("assets\level\groundExit.png")
+        self.images["path"] = load_image("assets\level\ground.png")
 
     def load_animation_frames(self, folder_path):
         """Load and resize animation frames from a given folder."""
-        frames = []
-        for file_name in sorted(os.listdir(folder_path)):
-            if file_name.endswith(".png"):
-                image = Image.open(os.path.join(folder_path, file_name))
-                resized_image = image.resize((self.cell_size, self.cell_size), Image.Resampling.LANCZOS)
-                frames.append(ImageTk.PhotoImage(resized_image))
-        return frames
+        try:
+            frames = []
+            for file_name in sorted(os.listdir(folder_path)):
+                if file_name.endswith(".png"):
+                    image = Image.open(os.path.join(folder_path, file_name))
+                    resized_image = image.resize((self.cell_size, self.cell_size), Image.Resampling.LANCZOS)
+                    frames.append(ImageTk.PhotoImage(resized_image))
+            return frames
+        except:
+            return -1
 
     def draw_maze(self):
         for row in range(self.grid_size):
@@ -317,7 +356,7 @@ class MazeGame:
             )
             self.root.update()
             
-            self.root.after(20)  # Delay between frames
+            self.root.after(int(self.fsreach(self.configfile_path, "animation_delay")))  # Delay between frames
     
     def allows_move_player(self, event = "none"):
         self.root.bind("<Up>", lambda event: self.move_player("up"))
@@ -332,7 +371,8 @@ class MazeGame:
         self.root.unbind("<Right>")
 
     def move_player(self, direction):
-        if self.is_moving:
+        self.check_password("")
+        if self.is_moving or not self.is_allDone:
             return
         
         row, col = self.player_pos
@@ -366,8 +406,48 @@ class MazeGame:
         else:
             self.is_moving = False
 
+    def check_password(self, event):
+        self.password = self.userinput.get()
+
+        #Kiểm tra tất cả các quy tắc đã đúng hay chưa
+        self.is_allDone = True
+        self.need_help = True
+        self.help_indicate = ""
+        for level in range(1, self.current_level + 1):
+            _, check_function = self.rules[level]
+            is_valid = check_function(self.password)
+            self.rule_status[level] = is_valid
+            self.rule_labels[level].configure(
+                text_color="white" if is_valid else "red"
+            )
+            if not is_valid:
+                self.is_allDone = False
+                if self.need_help:
+                    self.help_indicate = self.rule_labels[level]
+                    self.need_help = False
+
+        if not self.is_allDone:
+            return False
+        else:
+            return True
+        #Kiểm tra chiến thắng hoặc mở level tiếp theo
+        # if self.is_allDone:
+        #     if self.current_level == self.max_level:
+        #         if not hasattr(self, 'success_frame'):
+        #             self.Success()
+        #     else:
+        #         self.current_level +=1
+        #         self.create_rule_label(self.current_level)
+        #         print(f"Hoàn thành tất cả đến level{self.current_level}")
+        #         self.check_password(event)
+
     def on_enter_new_cell(self, cell):
-        """Handle logic for entering a new cell."""
+        self.current_level +=1
+        if self.current_level > self.max_level:
+            self.win_game()
+            return
+        self.create_rule_label(self.current_level)
+        self.check_password("")
         print(f"Entered new cell: {cell}")
 
     def win_game(self):
@@ -392,7 +472,7 @@ class MazeGame:
             quit_button.pack(side=tk.RIGHT, padx=20, pady=10)
 
         def animate_victory():
-            victory_frames = self.load_animation_frames("Image\Maze\hero\winA")
+            victory_frames = self.load_animation_frames("assets\hero\winA")
             for frame in victory_frames:
                 self.maze_canvas.itemconfig(self.player, image=frame)
                 self.root.update()
@@ -412,7 +492,10 @@ class MazeGame:
         self.is_Wingame = False
         self.player_pos = [0, 0]
         self.visited_cells = set()
+        for label in self.rule_labels.values():
+            label.destroy()
         self.visited_cells.add(tuple(self.player_pos))
+        self.current_level =1
         self.initialize_seed()
         self.initialize_rules()
         self.maze = self.generate_maze()
@@ -421,6 +504,26 @@ class MazeGame:
         self.is_moving = False
         self.update_fog()
         self.allows_move_player()
+        self.userinput.delete(0, 'end')
+        self.create_rule_label(1)
+         
+    def fsreach(self, file_path, keyword):
+        # Đọc file và tìm giá trị sau dấu '=' của từ khoá
+        # return value nếu tìm thấy giá trị, return -1 nếu tệp không tồn tại hoặc lỗi khác, return "" nếu không có tìm thấy từ khoá
+        try:
+            with open(file_path, 'r') as file:  # Mở tệp trong chế độ đọc
+                for line in file:  # Duyệt qua từng dòng trong tệp
+                    if keyword in line:  # Kiểm tra xem từ khóa có trong dòng không
+                        # Tách giá trị sau dấu '=' và loại bỏ khoảng trắng
+                        parts = line.split('=')  
+                        if len(parts) > 1:
+                            value = parts[1].strip()  # Lấy phần sau dấu '=' và loại bỏ khoảng trắng
+                            return value
+            return "" #f"Từ khóa '{keyword}' không tìm thấy trong tệp."
+        except FileNotFoundError:
+            return -1
+        except Exception as e:
+            return 0 #f"Lỗi: {e}"
 
 
 if __name__ == "__main__":

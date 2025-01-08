@@ -52,7 +52,7 @@ class The_Impossible_Key(Ctk.CTk):
         self.geometry(f"{self.width}x{self.height}")
 
         #Khởi tạo biến ban đầu
-        self.max_level = 11
+        self.max_level = 3
         self.current_level = 1
         
         self.initialize_game()
@@ -173,7 +173,7 @@ class The_Impossible_Key(Ctk.CTk):
         self.rule_labels = {}
 
     def password_change(self, event):
-        print("Đang kiểm tra...")
+        print("Dang kiem tra...")
         self.password = self.userinput.get()
         print (self.password)
 
