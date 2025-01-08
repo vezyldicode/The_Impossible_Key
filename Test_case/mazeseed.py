@@ -3,7 +3,7 @@ import tkinter as tk
 from random import choice, shuffle, seed
 from PIL import Image, ImageTk
 import os
-
+import random
 class MazeGame:
     def __init__(self, root):
         self.root = root
@@ -12,10 +12,13 @@ class MazeGame:
 
         # Configure grid dimensions
         self.grid_size = 10
-        self.cell_size = 50
+        self.cell_size = 40
 
         # Seed for maze generation
         self.maze_seed = None
+
+        # Generate or set seed
+        self.initialize_seed()
 
         # Maze map
         self.maze = self.generate_maze()
@@ -25,6 +28,10 @@ class MazeGame:
 
         # Exit position
         self.exit_pos = [self.grid_size - 1, self.grid_size - 1]
+
+        # Generate rules
+        self.initialize_rules()
+        # self.initialize_rules()
 
         # Create canvas for the game
         self.canvas = ctk.CTkCanvas(self.root, width=self.grid_size * self.cell_size,
@@ -38,10 +45,10 @@ class MazeGame:
 
         # Load animation frames
         self.animation_frames = {
-            "up": self.load_animation_frames("assets/animations/up"),
-            "down": self.load_animation_frames("assets/animations/down"),
-            "left": self.load_animation_frames("assets/animations/left"),
-            "right": self.load_animation_frames("assets/animations/right"),
+            "up": self.load_animation_frames("Image\Maze\hero\walkup"),
+            "down": self.load_animation_frames("Image\Maze\hero\walkdown"),
+            "left": self.load_animation_frames("Image\Maze\hero\walkleft"),
+            "right": self.load_animation_frames("Image\Maze\hero\walkright"),
         }
 
         # Keep track of visited cells
@@ -58,6 +65,40 @@ class MazeGame:
         # Create fog overlay
         self.fog_overlay = None
         self.update_fog()
+
+    def initialize_seed(self):
+        """Initialize the seed for maze generation and rules."""
+        # Prompt the user for a seed or generate one
+        # seed_input = input("Enter a seed (or leave blank for random): ").strip()
+        seed_input = 331317
+        if seed_input:
+            try:
+                self.maze_seed = int(seed_input)
+            except ValueError:
+                print("Invalid seed, generating a random one.")
+                self.maze_seed = random.randint(1, 10**6)
+        else:
+            self.maze_seed = random.randint(1, 10**6)
+        print(f"Using seed: {self.maze_seed}")
+        random.seed(self.maze_seed)
+
+    def initialize_rules(self):
+        """Generate rules based on the current seed."""
+        self.current_level = 1
+        self.max_level = 5  # Example: Total number of levels
+        self.ALL_RULES = {
+            1: "Rule 1",
+            2: "Rule 2",
+            3: "Rule 3",
+            4: "Rule 4",
+            5: "Rule 5"
+        }  # Define more rules as needed
+
+        rule_indices = random.sample(list(self.ALL_RULES.keys()), self.max_level)
+        self.rules = {i + 1: self.ALL_RULES[rule_idx] for i, rule_idx in enumerate(rule_indices)}
+        self.rule_status = {i: False for i in range(1, self.max_level + 1)}
+        self.rule_labels = {}
+        print("Generated rules:", self.rules)
 
     def generate_maze(self):
         if self.maze_seed is not None:
@@ -102,10 +143,10 @@ class MazeGame:
             resized_image = image.resize((self.cell_size, self.cell_size), Image.Resampling.LANCZOS)
             return ImageTk.PhotoImage(resized_image)
 
-        self.images["wall"] = load_image("assets/wall.png")
-        self.images["player"] = load_image("assets/player.png")
-        self.images["exit"] = load_image("assets/exit.png")
-        self.images["path"] = load_image("assets/path.png")
+        self.images["wall"] = load_image("Image\Maze\level\wallStone.png")
+        self.images["player"] = load_image("Image\Maze\hero\hitA\hero_hitA_0000.png")
+        self.images["exit"] = load_image("Image\Maze\level\groundExit.png")
+        self.images["path"] = load_image("Image\Maze\level\groundEarth_checkered.png")
 
     def load_animation_frames(self, folder_path):
         """Load and resize animation frames from a given folder."""
@@ -145,24 +186,36 @@ class MazeGame:
         )
 
     def update_fog(self):
-        """Update the fog overlay to highlight only visited cells."""
-        if self.fog_overlay:
-            self.canvas.delete(self.fog_overlay)
+        # """Update the fog overlay to highlight only visited cells."""
+        # if self.fog_overlay:
+        #     self.canvas.delete(self.fog_overlay)
 
-        # Create a fully black image
-        fog_image = Image.new("RGBA", (self.grid_size * self.cell_size, self.grid_size * self.cell_size), (0, 0, 0, 255))
+        # # Create a fully black image
+        # fog_image = Image.new("RGBA", (self.grid_size * self.cell_size, self.grid_size * self.cell_size), (0, 0, 0, 255))
+        # highlight_radius = 1  # Radius of visible area in cells
+        # px, py = self.player_pos
 
-        for cell in self.visited_cells:
-            px, py = cell
-            x1 = py * self.cell_size
-            y1 = px * self.cell_size
-            for x in range(x1, x1 + self.cell_size):
-                for y in range(y1, y1 + self.cell_size):
-                    fog_image.putpixel((x, y), (0, 0, 0, 0))  # Set transparent pixels for visible area
+        # for dx in range(-highlight_radius, highlight_radius + 1):
+        #     for dy in range(-highlight_radius, highlight_radius + 1):
+        #         nx, ny = px + dx, py + dy
+        #         if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size:
+        #             x1 = ny * self.cell_size
+        #             y1 = nx * self.cell_size
+        #             for x in range(x1, x1 + self.cell_size):
+        #                 for y in range(y1, y1 + self.cell_size):
+        #                     fog_image.putpixel((x, y), (0, 0, 0, 0))
+        # for cell in self.visited_cells:
+        #     px, py = cell
+        #     x1 = py * self.cell_size
+        #     y1 = px * self.cell_size
+        #     for x in range(x1, x1 + self.cell_size):
+        #         for y in range(y1, y1 + self.cell_size):
+        #             fog_image.putpixel((x, y), (0, 0, 0, 100))  # Set transparent pixels for visible area
 
-        fog_tk = ImageTk.PhotoImage(fog_image)
-        self.fog_overlay = self.canvas.create_image(0, 0, image=fog_tk, anchor=tk.NW)
-        self.canvas.image = fog_tk  # Keep a reference to avoid garbage collection
+        # fog_tk = ImageTk.PhotoImage(fog_image)
+        # self.fog_overlay = self.canvas.create_image(0, 0, image=fog_tk, anchor=tk.NW)
+        # self.canvas.image = fog_tk  # Keep a reference to avoid garbage collection
+        pass
 
     def animate_player(self, direction, target_pos):
         """Animate the player moving in the given direction."""
@@ -227,3 +280,19 @@ class MazeGame:
         print(f"Entered new cell: {cell}")
 
     def win_game(self):
+        self.canvas.create_text(
+            self.grid_size * self.cell_size // 2,
+            self.grid_size * self.cell_size // 2,
+            text="You Win!",
+            font=("Arial", 24),
+            fill="red"
+        )
+        self.root.unbind("<Up>")
+        self.root.unbind("<Down>")
+        self.root.unbind("<Left>")
+        self.root.unbind("<Right>")
+
+if __name__ == "__main__":
+    root = ctk.CTk()
+    game = MazeGame(root)
+    root.mainloop()

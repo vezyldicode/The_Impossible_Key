@@ -26,8 +26,12 @@ class MazeGame:
         # Exit position
         self.exit_pos = [self.grid_size - 1, self.grid_size - 1]
 
+        # Create main frame
+        self.main_frame = ctk.CTkFrame(self.root)
+        self.main_frame.pack(fill="both", expand=True)
+
         # Create canvas for the game
-        self.canvas = ctk.CTkCanvas(self.root, width=self.grid_size * self.cell_size,
+        self.canvas = ctk.CTkCanvas(self.main_frame, width=self.grid_size * self.cell_size,
                                     height=self.grid_size * self.cell_size, bg="white")
         self.canvas.pack()
 
@@ -38,10 +42,10 @@ class MazeGame:
 
         # Load animation frames
         self.animation_frames = {
-            "up": self.load_animation_frames("assets/animations/up"),
-            "down": self.load_animation_frames("assets/animations/down"),
-            "left": self.load_animation_frames("assets/animations/left"),
-            "right": self.load_animation_frames("assets/animations/right"),
+            "up": self.load_animation_frames("Image\Maze\hero\walkup"),
+            "down": self.load_animation_frames("Image\Maze\hero\walkdown"),
+            "left": self.load_animation_frames("Image\Maze\hero\walkleft"),
+            "right": self.load_animation_frames("Image\Maze\hero\walkright"),
         }
 
         # Keep track of visited cells
@@ -58,6 +62,25 @@ class MazeGame:
         # Create fog overlay
         self.fog_overlay = None
         self.update_fog()
+
+        # Create settings button
+        self.settings_button = ctk.CTkButton(self.main_frame, text="Settings", command=self.open_settings)
+        self.settings_button.pack(side="bottom", pady=10)
+
+        # Create settings frame
+        self.settings_frame = ctk.CTkFrame(self.root)
+
+        # Back button in settings
+        self.back_button = ctk.CTkButton(self.settings_frame, text="Back", command=self.close_settings)
+        self.back_button.pack(pady=10)
+
+    def open_settings(self):
+        self.main_frame.pack_forget()
+        self.settings_frame.pack(fill="both", expand=True)
+
+    def close_settings(self):
+        self.settings_frame.pack_forget()
+        self.main_frame.pack(fill="both", expand=True)
 
     def generate_maze(self):
         if self.maze_seed is not None:
@@ -102,10 +125,10 @@ class MazeGame:
             resized_image = image.resize((self.cell_size, self.cell_size), Image.Resampling.LANCZOS)
             return ImageTk.PhotoImage(resized_image)
 
-        self.images["wall"] = load_image("assets/wall.png")
-        self.images["player"] = load_image("assets/player.png")
-        self.images["exit"] = load_image("assets/exit.png")
-        self.images["path"] = load_image("assets/path.png")
+        self.images["wall"] = load_image("Image\Maze\level\wallStone.png")
+        self.images["player"] = load_image("Image\Maze\hero\hitA\hero_hitA_0000.png")
+        self.images["exit"] = load_image("Image\Maze\level\groundExit.png")
+        self.images["path"] = load_image("Image\Maze\level\groundEarth_checkered.png")
 
     def load_animation_frames(self, folder_path):
         """Load and resize animation frames from a given folder."""
@@ -145,20 +168,24 @@ class MazeGame:
         )
 
     def update_fog(self):
-        """Update the fog overlay to highlight only visited cells."""
+        """Update the fog overlay to highlight only cells around the player."""
         if self.fog_overlay:
             self.canvas.delete(self.fog_overlay)
 
         # Create a fully black image
         fog_image = Image.new("RGBA", (self.grid_size * self.cell_size, self.grid_size * self.cell_size), (0, 0, 0, 255))
+        highlight_radius = 1  # Radius of visible area in cells
+        px, py = self.player_pos
 
-        for cell in self.visited_cells:
-            px, py = cell
-            x1 = py * self.cell_size
-            y1 = px * self.cell_size
-            for x in range(x1, x1 + self.cell_size):
-                for y in range(y1, y1 + self.cell_size):
-                    fog_image.putpixel((x, y), (0, 0, 0, 0))  # Set transparent pixels for visible area
+        for dx in range(-highlight_radius, highlight_radius + 1):
+            for dy in range(-highlight_radius, highlight_radius + 1):
+                nx, ny = px + dx, py + dy
+                if 0 <= nx < self.grid_size and 0 <= ny < self.grid_size:
+                    x1 = ny * self.cell_size
+                    y1 = nx * self.cell_size
+                    for x in range(x1, x1 + self.cell_size):
+                        for y in range(y1, y1 + self.cell_size):
+                            fog_image.putpixel((x, y), (0, 0, 0, 0))  # Set transparent pixels for visible area
 
         fog_tk = ImageTk.PhotoImage(fog_image)
         self.fog_overlay = self.canvas.create_image(0, 0, image=fog_tk, anchor=tk.NW)
@@ -227,3 +254,20 @@ class MazeGame:
         print(f"Entered new cell: {cell}")
 
     def win_game(self):
+        self.canvas.create_text(
+            self.grid_size * self.cell_size // 2,
+            self.grid_size * self.cell_size // 2,
+            text="You Win!",
+            font=("Arial", 24),
+            fill="red"
+        )
+        self.root.unbind("<Up>")
+        self.root.unbind("<Down>")
+        self.root.unbind("<Left>")
+        self.root.unbind("<Right>")
+
+if __name__ == "__main__":
+    root = ctk.CTk()
+    game = MazeGame(root)
+    game.maze_seed = 12345  # Set a fixed seed for consistent maze generation
+    root.mainloop()

@@ -3,19 +3,28 @@ import tkinter as tk
 from random import choice, shuffle
 from PIL import Image, ImageTk
 import os
+import random
+from random import choice, shuffle, seed
 
 class MazeGame:
     def __init__(self, root):
         self.root = root
         self.root.title("Mind Maze")
-        self.root.geometry("1000x600")
+        self.root.geometry("1000x800")
 
         # Configure grid dimensions
         self.grid_size = 10
-        self.cell_size = 50
+        self.cell_size = 40
+
+        # Seed for maze generation
+        self.seed_input = ""
+
+        # Generate or set seed
+        self.initialize_seed()
 
         # Maze map
         self.maze = self.generate_maze()
+        self.is_Wingame = False
         
         # Player position
         self.player_pos = [0, 0]
@@ -23,6 +32,12 @@ class MazeGame:
         # Exit position
         self.exit_pos = [self.grid_size - 1, self.grid_size - 1]
 
+        # Create main frame
+        self.main_frame = ctk.CTkFrame(self.root)
+        self.main_frame.pack(fill="both", expand=True)
+
+        # Generate rules
+        self.initialize_rules()
 
         self.UI_setup()
 
@@ -32,6 +47,7 @@ class MazeGame:
         self.draw_maze()
 
         # Load animation frames
+
         self.animation_frames = {
             "up": self.load_animation_frames("Image\Maze\hero\walkup"),
             "down": self.load_animation_frames("Image\Maze\hero\walkdown"),
@@ -45,22 +61,130 @@ class MazeGame:
 
         # Bind keyboard events
         self.is_moving = False
-        self.root.bind("<Up>", lambda event: self.move_player("up"))
-        self.root.bind("<Down>", lambda event: self.move_player("down"))
-        self.root.bind("<Left>", lambda event: self.move_player("left"))
-        self.root.bind("<Right>", lambda event: self.move_player("right"))
-
+        self.allows_move_player()
+        # Create fog overlay
         self.fog_overlay = None
-        # self.update_fog()
+        self.update_fog()
+
+        self.setting_tab()
 
     def UI_setup(self):
-        # Create canvas for the game
-        self.canvas = ctk.CTkCanvas(self.root, width=self.grid_size * self.cell_size,
-                                    height=self.grid_size * self.cell_size, bg="white")
-        self.canvas.pack()
+        def nav_bar_setup():
+            self.setting_button = ctk.CTkButton(self.nav_bar,
+                                    text = "",
+                                    font=('Comic Sans MS', 15),
+                                    corner_radius=32,
+                                    command=self.open_settings,
+                                    width = 30)
+            self.setting_button.pack(side="right", padx=10, pady=10)
 
+        self.bg = '#2A3335'
+        self.textcolor = '#FFF0DC'
+        self.wrongcolor = '#D91656'
+
+        self.nav_bar = ctk.CTkFrame(self.main_frame,
+                                    height=35)
+        self.nav_bar.pack(padx =5, pady =5, fill='x')
+        nav_bar_setup()
+        # Tạo canvas cho maze
+        self.maze_canvas = ctk.CTkCanvas(self.main_frame,
+                                    width=self.grid_size * self.cell_size,
+                                    height=self.grid_size * self.cell_size,
+                                    bg=self.bg)
+        self.maze_canvas.pack()
+        self.maze_canvas.bind("<Button-1>", self.allows_move_player)
+
+    def setting_tab(self):
+        
+        # Create settings frame
+        self.settings_frame = ctk.CTkFrame(self.root)
+        self.setting_nav_bar = ctk.CTkFrame(self.settings_frame,
+                                        height=35)
+        self.setting_nav_bar.pack(padx =5, pady =5, fill='x')
+
+        # Back button in settings
+        self.back_button = ctk.CTkButton(self.setting_nav_bar,
+                                        text="Back",
+                                        command=self.close_settings)
+        self.back_button.pack(side="right", padx=10, pady=10)
+
+        self.seed_label = ctk.CTkLabel(self.settings_frame,
+                                        text=("Seed:"),
+                                        font=('Cascadia Code SemiBold', 25), 
+                                        text_color=self.textcolor)
+        self.seed_label.pack(side="left", padx=(20, 10), anchor = "n")
+        self.seed_label.bind("<Button-1>", lambda event: root.clipboard_append(str(getattr(self, 'maze_seed'))))
+        self.seed_entry = ctk.CTkEntry(self.settings_frame,
+                                       width=200,
+                                       border_width=0,
+                                       font=('Cascadia Code SemiBold', 25),
+                                       text_color=self.textcolor,
+                                       fg_color="transparent")
+        self.seed_entry.pack(side="left", anchor = "n")
+
+        self.checkbox = ctk.CTkCheckBox(self.settings_frame, text = "Option", font=('Cascadia Code SemiBold', 25), 
+                                        text_color=self.textcolor)
+        self.checkbox.pack(side ="top", padx = 20, anchor = "w")
+
+        self.update_setting()
+
+    def update_setting(self):
+            self.seed_label.configure(text="Seed:")
+            self.seed_entry.delete(0, 'end')
+            self.seed_entry.insert(0, self.maze_seed)
+
+    def open_settings(self):
+        self.main_frame.pack_forget()
+        self.update_setting()
+        self.settings_frame.pack(fill="both", expand=True)
+        self.disable_move_player()
+
+
+    def close_settings(self):
+        self.settings_frame.pack_forget()
+        self.main_frame.pack(fill="both", expand=True)
+
+    def initialize_seed(self):
+        """Initialize the seed for maze generation and rules."""
+        if self.seed_input:
+            try:
+                self.maze_seed = int(self.seed_input)
+            except ValueError:
+                print("Invalid seed, generating a random one.")
+                self.maze_seed = random.randint(1, 10**6)
+        else:
+            self.maze_seed = random.randint(1, 10**6)
+        print(f"Using seed: {self.maze_seed}")
+        random.seed(self.maze_seed)
+
+    def initialize_rules(self):
+        """Generate rules based on the current seed."""
+        self.current_level = 1
+        self.max_level = 5  # Example: Total number of levels
+        self.ALL_RULES = {
+            1: "Rule 1",
+            2: "Rule 2",
+            3: "Rule 3",
+            4: "Rule 4",
+            5: "Rule 5"
+        }  # Define more rules as needed
+        seed(self.maze_seed)  # Use the same seed as the maze
+
+        rule_indices = list(self.ALL_RULES.keys())
+        shuffle(rule_indices)  # Shuffle the rules based on the seed
+        self.rules = {i + 1: self.ALL_RULES[rule_idx] for i, rule_idx in enumerate(rule_indices[:self.max_level])}
+        print("Generated rules:", self.rules)
+
+        # rule_indices = random.sample(list(self.ALL_RULES.keys()), self.max_level)
+        # self.rules = {i + 1: self.ALL_RULES[rule_idx] for i, rule_idx in enumerate(rule_indices)}
+        # self.rule_status = {i: False for i in range(1, self.max_level + 1)}
+        # self.rule_labels = {}
+        
 
     def generate_maze(self):
+        if self.maze_seed is not None:
+            seed(self.maze_seed)
+
         maze = [[1 for _ in range(self.grid_size)] for _ in range(self.grid_size)]
 
         # Create a guaranteed path using depth-first search (DFS)
@@ -124,32 +248,33 @@ class MazeGame:
                 y_center = y1 + self.cell_size // 2
 
                 if self.maze[row][col] == 1:
-                    self.canvas.create_image(x_center, y_center, image=self.images["wall"])
+                    self.maze_canvas.create_image(x_center, y_center, image=self.images["wall"])
                 else:
-                    self.canvas.create_image(x_center, y_center, image=self.images["path"])
+                    self.maze_canvas.create_image(x_center, y_center, image=self.images["path"])
         # Draw exit
-        self.canvas.create_image(
+        self.maze_canvas.create_image(
             self.exit_pos[1] * self.cell_size + self.cell_size // 2,
             self.exit_pos[0] * self.cell_size + self.cell_size // 2,
             image=self.images["exit"]
         )
         # Draw player
-        self.player = self.canvas.create_image(
+        self.player = self.maze_canvas.create_image(
             self.player_pos[1] * self.cell_size + self.cell_size // 2,
             self.player_pos[0] * self.cell_size + self.cell_size // 2,
             image=self.images["player"]
         )
 
-        
     def update_fog(self):
-        """Update the fog overlay to highlight only cells around the player."""
+        """Update the fog overlay to highlight only visited cells."""
         if self.fog_overlay:
-            self.canvas.delete(self.fog_overlay)
+            self.maze_canvas.delete(self.fog_overlay)
 
-        fog_image = Image.new("RGBA", (self.grid_size * self.cell_size, self.grid_size * self.cell_size), (0, 0, 0, 255))
+        # Create a fully black image
+        fog_image = Image.new("RGBA", (self.grid_size * self.cell_size,
+                                    self.grid_size * self.cell_size),
+                                    (0, 0, 0, 255))
         highlight_radius = 1  # Radius of visible area in cells
         px, py = self.player_pos
-
         for dx in range(-highlight_radius, highlight_radius + 1):
             for dy in range(-highlight_radius, highlight_radius + 1):
                 nx, ny = px + dx, py + dy
@@ -159,10 +284,17 @@ class MazeGame:
                     for x in range(x1, x1 + self.cell_size):
                         for y in range(y1, y1 + self.cell_size):
                             fog_image.putpixel((x, y), (0, 0, 0, 0))
+        for cell in self.visited_cells:
+            px, py = cell
+            x1 = py * self.cell_size
+            y1 = px * self.cell_size
+            for x in range(x1, x1 + self.cell_size):
+                for y in range(y1, y1 + self.cell_size):
+                    fog_image.putpixel((x, y), (0, 0, 0, 100))  # Set transparent pixels for visible area
 
         fog_tk = ImageTk.PhotoImage(fog_image)
-        self.fog_overlay = self.canvas.create_image(0, 0, image=fog_tk, anchor=tk.NW)
-        self.canvas.image = fog_tk  # Keep a reference to avoid garbage collection
+        self.fog_overlay = self.maze_canvas.create_image(0, 0, image=fog_tk, anchor=tk.NW)
+        self.maze_canvas.image = fog_tk  # Keep a reference to avoid garbage collection
 
     def animate_player(self, direction, target_pos):
         """Animate the player moving in the given direction."""
@@ -177,8 +309,8 @@ class MazeGame:
         dy = (end_y - start_y) / steps
 
         for i, frame in enumerate(frames):
-            self.canvas.itemconfig(self.player, image=frame)
-            self.canvas.coords(
+            self.maze_canvas.itemconfig(self.player, image=frame)
+            self.maze_canvas.coords(
                 self.player,
                 start_x + dx * (i + 1),
                 start_y + dy * (i + 1)
@@ -186,15 +318,24 @@ class MazeGame:
             self.root.update()
             
             self.root.after(20)  # Delay between frames
-            
+    
+    def allows_move_player(self, event = "none"):
+        self.root.bind("<Up>", lambda event: self.move_player("up"))
+        self.root.bind("<Down>", lambda event: self.move_player("down"))
+        self.root.bind("<Left>", lambda event: self.move_player("left"))
+        self.root.bind("<Right>", lambda event: self.move_player("right"))
 
+    def disable_move_player(self):
+        self.root.unbind("<Up>")
+        self.root.unbind("<Down>")
+        self.root.unbind("<Left>")
+        self.root.unbind("<Right>")
 
     def move_player(self, direction):
         if self.is_moving:
             return
         
         row, col = self.player_pos
-
         if direction == "up" and row > 0 and self.maze[row - 1][col] == 0:
             target_pos = [row - 1, col]
         elif direction == "down" and row < self.grid_size - 1 and self.maze[row + 1][col] == 0:
@@ -212,6 +353,7 @@ class MazeGame:
         # Update player position
         self.player_pos = target_pos
         self.update_fog()
+
         # Call on_enter_new_cell if the cell is new
         current_cell = tuple(self.player_pos)
         if current_cell not in self.visited_cells:
@@ -252,36 +394,34 @@ class MazeGame:
         def animate_victory():
             victory_frames = self.load_animation_frames("Image\Maze\hero\winA")
             for frame in victory_frames:
-                self.canvas.itemconfig(self.player, image=frame)
+                self.maze_canvas.itemconfig(self.player, image=frame)
                 self.root.update()
                 self.root.after(100)
 
-        # Stop player movement
-        self.root.unbind("<Up>")
-        self.root.unbind("<Down>")
-        self.root.unbind("<Left>")
-        self.root.unbind("<Right>")
 
-        # Show victory animation
-        animate_victory()
-
-        # Display replay prompt
-        replay_prompt()
+        self.is_Wingame = True
+        
+        self.disable_move_player() # Tắt khả năng di chuyển
+        self.maze_canvas.delete(self.fog_overlay) #Xoá bóng đêm
+        animate_victory() #Chạy hoạt ảnh chiến thắng
+        
+        replay_prompt() #mở bảng thông báo restart hay quit
 
     def reset_game(self):
         """Reset the game to start again."""
+        self.is_Wingame = False
         self.player_pos = [0, 0]
         self.visited_cells = set()
         self.visited_cells.add(tuple(self.player_pos))
+        self.initialize_seed()
+        self.initialize_rules()
         self.maze = self.generate_maze()
-        self.canvas.delete("all")
+        self.maze_canvas.delete("all")
         self.draw_maze()
         self.is_moving = False
         self.update_fog()
-        self.root.bind("<Up>", lambda event: self.move_player("up"))
-        self.root.bind("<Down>", lambda event: self.move_player("down"))
-        self.root.bind("<Left>", lambda event: self.move_player("left"))
-        self.root.bind("<Right>", lambda event: self.move_player("right"))
+        self.allows_move_player()
+
 
 if __name__ == "__main__":
     root = ctk.CTk()
