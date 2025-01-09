@@ -372,7 +372,7 @@ class MazeGame:
 
     def move_player(self, direction):
         self.check_password("")
-        if self.is_moving or not self.is_allDone:
+        if self.is_moving: #or not self.is_allDone:
             return
         
         row, col = self.player_pos
