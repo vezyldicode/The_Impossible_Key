@@ -56,13 +56,15 @@ class PasswordRules:
     @staticmethod
     def check_first_and_last_letter(password):
         #kiểm tra kí tự đầu tiên và kí tự cuối cùng
+        if len(password) <=1:
+            return False
         return password[0] == password[-1]
     
     @staticmethod
     def check_vowels_count(password):
         """Kiểm tra có chính xác 3 nguyên âm"""
         vowels = 'aeiouAEIOU'
-        return sum(1 for c in password if c in vowels) == 3
+        return sum(1 for c in password if c in vowels) >= 3
 
     @staticmethod
     def check_consonants_count(password):
@@ -284,7 +286,7 @@ ALL_RULES = {
     9: ("Phải có ít nhất 2 ký tự đặc biệt", PasswordRules.check_two_special),
     10: ("Độ dài phải là số lẻ", PasswordRules.check_odd_length),
     11: ("Kí tự đầu tiên phải trùng với kí tự cuối cùng", PasswordRules.check_first_and_last_letter),
-    12: ("Phải có chính xác 3 nguyên âm", PasswordRules.check_vowels_count),
+    12: ("Phải có nhiều hơn 3 nguyên âm", PasswordRules.check_vowels_count),
     13: ("Phải có ít nhất 4 phụ âm", PasswordRules.check_consonants_count),
     14: ("Các chữ cái phải xen kẽ hoa thường", PasswordRules.check_alternate_case),
     15: ("Không có 2 chữ cái giống nhau liền kề", PasswordRules.check_no_consecutive_same_letter),
@@ -294,7 +296,7 @@ ALL_RULES = {
     19: ("Số lượng chữ cái phải là bội số của 3", PasswordRules.check_letter_count_multiple_3),
     20: ("Phải bắt đầu bằng phụ âm", PasswordRules.check_starts_with_consonant),
     21: ("Phải kết thúc bằng nguyên âm", PasswordRules.check_ends_with_vowel),
-    22: ("Các chữ cái phải tạo thành hình kim tự tháp về case", PasswordRules.check_pyramid_case),
+    22: ("Các chữ cái phải tạo thành hình kim tự tháp", PasswordRules.check_pyramid_case),
     23: ("Phải chứa tên của một tháng", PasswordRules.check_contains_month),
     24: ("Các chữ cái phải tạo thành chuỗi palindrome", PasswordRules.check_palindrome_letters),
     25: ("Phải có ít nhất một cặp chữ cái đôi", PasswordRules.check_double_letters),

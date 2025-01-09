@@ -6,6 +6,8 @@ import os
 import random
 from random import choice, shuffle, seed
 from assets.quizzes.Rules_Dictionary import *
+import time
+from threading import Thread
 
 class MazeGame:
     def __init__(self, root):
@@ -90,6 +92,11 @@ class MazeGame:
 
         self.setting_tab()
         self.create_rule_label(1)
+        self.running = True
+        self.reset_event = False
+        self.elapsed_time = 0
+        thread = Thread(target=self.update_timer, daemon=True)
+        thread.start()
     def UI_setup(self):
         self.setting_button = ctk.CTkButton(self.nav_bar,
                                 text = "",
@@ -99,6 +106,10 @@ class MazeGame:
                                 width = 30)
         self.setting_button.pack(side="right", padx=10, pady=10)
 
+        self.timer_label = ctk.CTkLabel(self.nav_bar,
+                                text="00:00:00:00",
+                                font=self.textfont)
+        self.timer_label.pack(side="left")
         # Tạo canvas cho maze
         self.maze_canvas = ctk.CTkCanvas(self.maze_frame,
                                     width=self.grid_size * self.cell_size,
@@ -372,7 +383,7 @@ class MazeGame:
 
     def move_player(self, direction):
         self.check_password("")
-        if self.is_moving: #or not self.is_allDone:
+        if self.is_moving or not self.is_allDone:
             return
         
         row, col = self.player_pos
@@ -506,6 +517,24 @@ class MazeGame:
         self.allows_move_player()
         self.userinput.delete(0, 'end')
         self.create_rule_label(1)
+        self.reset_event = True
+
+    def update_timer(self):
+        start_time = time.time()
+        while self.running:
+            if self.reset_event:  # Nếu reset, cập nhật lại thời gian bắt đầu
+                start_time = time.time()
+                self.elapsed_time = 0
+                self.reset_event = False
+
+            self.elapsed_time = time.time() - start_time
+            hours, remainder = divmod(self.elapsed_time, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            milliseconds = int((self.elapsed_time - int(self.elapsed_time)) * 100)
+            self.timer_label.configure(
+                text=f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}:{milliseconds:02}"
+            )
+            time.sleep(0.01)
          
     def fsreach(self, file_path, keyword):
         # Đọc file và tìm giá trị sau dấu '=' của từ khoá
