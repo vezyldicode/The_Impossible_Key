@@ -25,7 +25,7 @@ class PasswordRules:
     def check_sum_10(password):
         """Kiểm tra tổng các số bằng 10"""
         numbers = [int(c) for c in password if c.isdigit()]
-        return sum(numbers) == 10 if numbers else False
+        return sum(numbers) >= 10 if numbers else False
 
     @staticmethod
     def check_three_letters(password):
@@ -99,7 +99,7 @@ class PasswordRules:
     @staticmethod
     def check_contains_hello(password):
         """Phải chứa 'hello' với chữ cái đầu viết hoa"""
-        return 'Hello' in password
+        return 'hello' in password.lower()
 
     @staticmethod
     def check_z_before_a(password):
@@ -126,18 +126,10 @@ class PasswordRules:
         return password[0] in consonants if password else False
 
     @staticmethod
-    def check_ends_with_vowel(password):
-        """Phải kết thúc bằng nguyên âm"""
-        vowels = 'aeiouAEIOU'
-        return password[-1] in vowels if password else False
-
-    @staticmethod
-    def check_pyramid_case(password):
-        """Các chữ cái phải tăng dần về độ cao (thường->hoa)"""
-        letters = [c for c in password if c.isalpha()]
-        lower_count = sum(1 for c in letters[:len(letters)//2] if c.islower())
-        upper_count = sum(1 for c in letters[len(letters)//2:] if c.isupper())
-        return lower_count == len(letters)//2 and upper_count == len(letters) - len(letters)//2
+    def check_letter_groups(password):
+        """Phải có các nhóm chữ cái theo chức năng ngữ âm (ch, sh, th, wh)"""
+        phonetic_groups = ['ch', 'sh', 'th', 'wh']
+        return any(group in password.lower() for group in phonetic_groups)
 
     @staticmethod
     def check_contains_month(password):
@@ -272,6 +264,116 @@ class PasswordRules:
         lower_pass = password.lower()
         return any(pattern.replace('.', '.').replace('-', '-') in lower_pass for pattern in morse_patterns.values())
 
+    @staticmethod
+    def contains_prime(password):
+        """Kiểm tra có số nguyên tố"""
+        def is_prime(n):
+            if n < 2:
+                return False
+            for i in range(2, int(n ** 0.5) + 1):
+                if n % i == 0:
+                    return False
+            return True
+        return any(is_prime(int(c)) for c in password if c.isdigit())
+    
+    @staticmethod
+    def has_fibonacci_sequence(password):
+        """Kiểm tra có 3 số liên tiếp thuộc dãy Fibonacci"""
+        nums = [int(c) for c in password if c.isdigit()]
+        for i in range(len(nums)-2):
+            if nums[i+2] == nums[i+1] + nums[i]:
+                return True
+        return False
+    
+    @staticmethod
+    def sum_digits_even(password):
+        """Tổng các chữ số phải là số chẵn"""
+        return sum(int(c) for c in password if c.isdigit()) % 2 == 0
+    
+    @staticmethod
+    def product_digits_greater_100(password):
+        """Tích các chữ số phải lớn hơn 100"""
+        nums = [int(c) for c in password if c.isdigit()]
+        if not nums:
+            return False
+        product = 1
+        for n in nums:
+            product *= n
+        return product > 100
+    
+    @staticmethod
+    def contains_perfect_square(password):
+        """Chứa ít nhất một số chính phương"""
+        nums = [int(c) for c in password if c.isdigit()]
+        return any(int(n ** 0.5) ** 2 == n for n in nums)
+    
+    @staticmethod
+    def has_ascending_sequence(password):
+        """Có dãy 3 số tăng dần"""
+        nums = [int(c) for c in password if c.isdigit()]
+        for i in range(len(nums)-2):
+            if nums[i] < nums[i+1] < nums[i+2]:
+                return True
+        return False
+    
+    @staticmethod
+    def contains_multiple_three(password):
+        """Chứa số chia hết cho 3"""
+        return any(int(c) % 3 == 0 for c in password if c.isdigit())
+    
+    @staticmethod
+    def digit_count_prime(password):
+        """Số lượng chữ số là số nguyên tố"""
+        def is_prime(n):
+            if n < 2:
+                return False
+            for i in range(2, int(n ** 0.5) + 1):
+                if n % i == 0:
+                    return False
+            return True
+        digit_count = sum(1 for c in password if c.isdigit())
+        return is_prime(digit_count)
+    
+    @staticmethod
+    def contains_perfect_number(password):
+        """Chứa số hoàn hảo (6, 28, 496, 8128)"""
+        perfect_numbers = {6, 28, 496, 8128}
+        nums = [int(c) for c in password if c.isdigit()]
+        return any(n in perfect_numbers for n in nums)
+    
+    @staticmethod
+    def alternating_odd_even(password):
+        """Các chữ số phải xen kẽ chẵn lẻ"""
+        nums = [int(c) for c in password if c.isdigit()]
+        if len(nums) < 2:
+            return False
+        for i in range(len(nums)-1):
+            if nums[i] % 2 == nums[i+1] % 2:
+                return False
+        return True
+    
+    @staticmethod
+    def contains_armstrong_number(password):
+        """Chứa số Armstrong (153, 370, 371, 407)"""
+        armstrong_numbers = {153, 370, 371, 407}
+        nums = [int(c) for c in password if c.isdigit()]
+        return any(n in armstrong_numbers for n in nums)
+    
+    @staticmethod
+    def digit_difference_prime(password):
+        """Hiệu của chữ số lớn nhất và nhỏ nhất là số nguyên tố"""
+        def is_prime(n):
+            if n < 2:
+                return False
+            for i in range(2, int(n ** 0.5) + 1):
+                if n % i == 0:
+                    return False
+            return True
+        nums = [int(c) for c in password if c.isdigit()]
+        if len(nums) < 2:
+            return False
+        return is_prime(max(nums) - min(nums))
+
 
 # Danh sách tất cả các quy tắc
 ALL_RULES = {
@@ -279,7 +381,7 @@ ALL_RULES = {
     2: ("Phải có ít nhất 1 chữ hoa", PasswordRules.check_uppercase),
     3: ("Phải có ít nhất 1 số", PasswordRules.check_number),
     4: ("Phải có ít nhất 1 ký tự đặc biệt (!@#$%^&*)", PasswordRules.check_special),
-    5: ("Tổng các số trong mật khẩu phải bằng 10", PasswordRules.check_sum_10),
+    5: ("Tổng các số trong mật khẩu phải lớn hơn hoặc bằng 10", PasswordRules.check_sum_10),
     6: ("Phải có ít nhất 3 chữ cái", PasswordRules.check_three_letters),
     7: ("Phải chứa từ 'password'", PasswordRules.check_contains_password),
     8: ("Phải có số chẵn", PasswordRules.check_even_number),
@@ -295,14 +397,25 @@ ALL_RULES = {
     18: ("Nếu có chữ 'z', phải có chữ 'a' đứng sau nó", PasswordRules.check_z_before_a),
     19: ("Số lượng chữ cái phải là bội số của 3", PasswordRules.check_letter_count_multiple_3),
     20: ("Phải bắt đầu bằng phụ âm", PasswordRules.check_starts_with_consonant),
-    21: ("Phải kết thúc bằng nguyên âm", PasswordRules.check_ends_with_vowel),
-    22: ("Các chữ cái phải tạo thành hình kim tự tháp", PasswordRules.check_pyramid_case),
-    23: ("Phải chứa tên của một tháng", PasswordRules.check_contains_month),
-    24: ("Các chữ cái phải tạo thành chuỗi palindrome", PasswordRules.check_palindrome_letters),
-    25: ("Phải có ít nhất một cặp chữ cái đôi", PasswordRules.check_double_letters),
-    26: ("Không được chứa chữ 'y'", PasswordRules.check_no_y),
-    27: ("Số nguyên âm phải nhiều hơn số phụ âm", PasswordRules.check_more_vowels_than_consonants),
-    28: ("Phải chứa tên của một màu cơ bản", PasswordRules.check_contains_color),
-    29: ("Phải có ít nhất hai cặp chữ cái giống nhau", PasswordRules.check_letter_pairs),
-    30: ("Phải chứa ít nhất một cặp chữ cái đối xứng (d/b, p/q, M/W, n/u)", PasswordRules.check_mirror_letters),
+    21: ("Phải có các nhóm chữ cái theo chức năng ngữ âm (ch, sh, th, wh)", PasswordRules.check_letter_groups),
+    22: ("Phải chứa tên của một tháng", PasswordRules.check_contains_month),
+    23: ("Các chữ cái phải tạo thành chuỗi palindrome", PasswordRules.check_palindrome_letters),
+    24: ("Phải có ít nhất một cặp chữ cái đôi", PasswordRules.check_double_letters),
+    25: ("Không được chứa chữ 'y'", PasswordRules.check_no_y),
+    26: ("Số nguyên âm phải nhiều hơn số phụ âm", PasswordRules.check_more_vowels_than_consonants),
+    27: ("Phải chứa tên của một màu cơ bản", PasswordRules.check_contains_color),
+    28: ("Phải có ít nhất hai cặp chữ cái giống nhau", PasswordRules.check_letter_pairs),
+    29: ("Phải chứa ít nhất một cặp chữ cái đối xứng (d/b, p/q, M/W, n/u)", PasswordRules.check_mirror_letters),
+    30: ("Phải chứa ít nhất một số nguyên tố", PasswordRules.contains_prime),
+    31: ("Phải có 3 số liên tiếp thuộc dãy Fibonacci", PasswordRules.has_fibonacci_sequence),
+    32: ("Tổng các chữ số phải là số chẵn", PasswordRules.sum_digits_even),
+    44: ("Tích các chữ số phải lớn hơn 100", PasswordRules.product_digits_greater_100),
+    34: ("Phải chứa ít nhất một số chính phương", PasswordRules.contains_perfect_square),
+    35: ("Phải có dãy 3 số tăng dần", PasswordRules.has_ascending_sequence),
+    36: ("Phải chứa số chia hết cho 3", PasswordRules.contains_multiple_three),
+    37: ("Số lượng chữ số phải là số nguyên tố", PasswordRules.digit_count_prime),
+    38: ("Phải chứa một số hoàn hảo (6, 28, 496, 8128)", PasswordRules.contains_perfect_number),
+    39: ("Các chữ số phải xen kẽ chẵn lẻ", PasswordRules.alternating_odd_even),
+    40: ("Phải chứa một số Armstrong (153, 370, 371, 407)", PasswordRules.contains_armstrong_number),
+    41: ("Hiệu của chữ số lớn nhất và nhỏ nhất phải là số nguyên tố", PasswordRules.digit_difference_prime),
 }
