@@ -4,7 +4,7 @@ from tkinter import font
 import random
 from PIL import Image, ImageTk
 import os
-from lib.Rules_Dictionary import *
+from assets.quizzes.Rules_Dictionary import *
 
 class Metadata:
     App_name = "Who nees a password like this"
